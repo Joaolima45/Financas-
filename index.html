@@ -166,6 +166,8 @@ nav.tabs button.on{color:var(--text);background:rgba(255,255,255,.18);box-shadow
 .field{width:100%;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:var(--text);font:500 16px var(--font);outline:none;margin-bottom:10px;-webkit-appearance:none;appearance:none}
 .field:focus{border-color:rgba(255,255,255,.4)}
 input[type=date].field{min-height:50px}
+textarea.field{resize:none;min-height:76px;line-height:1.4}
+.note{display:block;color:var(--muted);font-size:12px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic}
 .flabel{font-size:12px;color:var(--muted);font-weight:600;margin:6px 4px 6px;text-transform:uppercase;letter-spacing:.5px}
 .chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px;scrollbar-width:none}
 .chips.wrap{flex-wrap:wrap;overflow:visible}
@@ -443,7 +445,7 @@ function render(){
 }
 function itemHTML(e){
   entryMap[e.key]=e;const c=catById(e.cat),card=e.card?cardById(e.card):null;
-  return `<div class="item" data-act="edit" data-k="${esc(e.key)}"><div class="ico">${c.e}</div><div class="t"><b>${esc(e.desc)}</b><small>${esc(c.n)} · ${dm(e.date)}${e.tag?` <span class="tag">${e.tag}</span>`:''}${card?` <span class="tag" style="background:${card.c}">💳 ${esc(card.n)}</span>`:''}</small></div><div class="amt ${e.v>0?'in':''}">${e.v>0?'+':'−'} ${brl(Math.abs(e.v))}</div></div>`;
+  return `<div class="item" data-act="edit" data-k="${esc(e.key)}"><div class="ico">${c.e}</div><div class="t"><b>${esc(e.desc)}</b><small>${esc(c.n)} · ${dm(e.date)}${e.tag?` <span class="tag">${e.tag}</span>`:''}${card?` <span class="tag" style="background:${card.c}">💳 ${esc(card.n)}</span>`:''}${e.t.note?' <span title="Tem observação">📝</span>':''}</small>${e.t.note?`<span class="note">${esc(e.t.note)}</span>`:''}</div><div class="amt ${e.v>0?'in':''}">${e.v>0?'+':'−'} ${brl(Math.abs(e.v))}</div></div>`;
 }
 function donut(by,total,center){
   const ents=Object.entries(by).sort((a,b)=>b[1]-a[1]);let off=25,svg='<circle cx="21" cy="21" r="15.9" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="5"/>';
@@ -480,7 +482,7 @@ function vHome(){
 /* ---- Lançamentos ---- */
 function vLanc(){
   const s=summary(M);const q=query.toLowerCase();
-  let E=s.E.filter(e=>(filter==='all'||(filter==='in'&&e.v>0)||(filter==='out'&&e.v<0&&!e.card)||(filter==='card'&&e.card))&&(!q||e.desc.toLowerCase().includes(q)||catById(e.cat).n.toLowerCase().includes(q)));
+  let E=s.E.filter(e=>(filter==='all'||(filter==='in'&&e.v>0)||(filter==='out'&&e.v<0&&!e.card)||(filter==='card'&&e.card))&&(!q||e.desc.toLowerCase().includes(q)||(e.t.note||'').toLowerCase().includes(q)||catById(e.cat).n.toLowerCase().includes(q)));
   let h=`<div class="seg glass">${[['all','Todos'],['in','Receitas'],['out','Despesas'],['card','Cartão']].map(([k,l])=>`<button class="${filter===k?'on':''}" data-act="filter" data-f="${k}">${l}</button>`).join('')}</div>
   <input class="field glass search" id="q" placeholder="🔎 Buscar lançamento" value="${esc(query)}">`;
   const acc=E.filter(e=>!e.card),cards=E.filter(e=>e.card);
@@ -554,7 +556,7 @@ function vSettings(){
     <b>iPhone (Safari):</b><ol><li>Abra o link do app no Safari</li><li>Toque em Compartilhar <b>⎋</b></li><li>Escolha <b>Adicionar à Tela de Início</b></li></ol>
     <b>Android (Chrome):</b><ol><li>Abra o link no Chrome</li><li>Menu <b>⋮</b> › <b>Instalar app</b></li></ol>
     Depois de instalado, abra pelo ícone. Funciona offline e os dados ficam salvos no aparelho.</div>`;
-  h+=`<div class="sec-title"><h3>Zona de perigo</h3></div><button class="btn danger" data-act="reset">Apagar todos os dados</button><p class="label" style="text-align:center;margin-top:16px">Finanças · v1.1 · ${S.tx.length} lançamentos</p>`;
+  h+=`<div class="sec-title"><h3>Zona de perigo</h3></div><button class="btn danger" data-act="reset">Apagar todos os dados</button><p class="label" style="text-align:center;margin-top:16px">Finanças · v1.2 · ${S.tx.length} lançamentos</p>`;
   setTimeout(async()=>{
     const el=$('#persist');if(el&&navigator.storage&&navigator.storage.persisted){const p=await navigator.storage.persisted();el.innerHTML=p?'Armazenamento: <b style="color:var(--green)">protegido contra limpeza ✓</b>':'Armazenamento: padrão do navegador'}
     const sn=$('#snaps');if(sn){const snaps=JSON.parse(await DB.get('snaps')||'[]');if(snaps.length)sn.innerHTML=`<div class="flabel" style="margin-top:16px">Cópias automáticas no aparelho</div>`+snaps.slice(0,5).map((x,i)=>`<div class="optrow" style="padding:10px 14px"><div class="t" style="font-size:14px">${new Date(x.d+'T12:00').toLocaleDateString('pt-BR')}<small>${x.n} lançamentos</small></div><button class="go link" data-act="snap" data-i="${i}">Restaurar</button></div>`).join('')}
@@ -568,12 +570,12 @@ function openSheet(html){$('#sheetBody').innerHTML=html;$('#sheet').classList.ad
 function closeSheet(){$('#sheet').classList.remove('on');$('#scrim').classList.remove('on');F=null}
 function newForm(over={}){
   const d=M===ymOf(new Date())?todayStr():dateIn(M,1);
-  F=Object.assign({mode:'new',type:'out',cents:0,desc:'',cat:'mercado',date:d,pay:'conta',parc:1,rec:false},over);renderForm();
+  F=Object.assign({mode:'new',type:'out',cents:0,desc:'',note:'',cat:'mercado',date:d,pay:'conta',parc:1,rec:false},over);renderForm();
 }
 function editForm(e){const t=e.t;
-  F={mode:'edit',entry:e,type:t.type,cents:Math.round(t.amount*100),desc:t.desc,cat:t.cat,date:t.rec&&!e.card?e.date:t.date,pay:t.pay||'conta',parc:t.parc||1,rec:!!t.rec,attId:t.att||null};renderForm();
+  F={mode:'edit',entry:e,type:t.type,cents:Math.round(t.amount*100),desc:t.desc,note:t.note||'',cat:t.cat,date:t.rec&&!e.card?e.date:t.date,pay:t.pay||'conta',parc:t.parc||1,rec:!!t.rec,attId:t.att||null};renderForm();
   if(t.att)DB.get('att:'+t.att).then(d=>{if(F&&F.attId===t.att&&d){F.attSrc=d;const im=$('#attImg');if(im)im.src=d}});}
-function syncForm(){if(!F)return;const a=$('#fAmount'),d=$('#fDesc'),dt=$('#fDate');if(a)F.cents=+(a.value.replace(/\D/g,'')||0);if(d)F.desc=d.value;if(dt&&dt.value)F.date=dt.value}
+function syncForm(){if(!F)return;const a=$('#fAmount'),d=$('#fDesc'),dt=$('#fDate');if(a)F.cents=+(a.value.replace(/\D/g,'')||0);if(d)F.desc=d.value;const nt=$('#fNote');if(nt)F.note=nt.value;if(dt&&dt.value)F.date=dt.value}
 function renderForm(){
   const cats=S.cats.filter(c=>c.type===F.type);if(!cats.some(c=>c.id===F.cat))F.cat=cats[0].id;
   if(F.type==='in')F.pay='conta';
@@ -585,6 +587,8 @@ function renderForm(){
    ${F.ocr?`<div class="ocrnote ${F.ocrMiss?'warn':''}">🤖 <b>${F.ocrMiss?'Não achei o valor total na foto.':'Li a nota automaticamente.'}</b> Confira valor, data, loja e forma de pagamento antes de salvar.${F.pickCard?' Escolha o cartão usado.':''}${F.payHint==='credito'&&!S.cards.length?' A nota indica cartão de crédito: cadastre o cartão abaixo.':''}</div>`:''}
    <input class="amount-in ${F.type==='in'?'in':''}" id="fAmount" inputmode="numeric" value="${brl(v)}" aria-label="Valor">
    <input class="field" id="fDesc" placeholder="Descrição (ex.: Mercado do mês)" value="${esc(F.desc)}" maxlength="60">
+   <div class="flabel">Observações <span style="text-transform:none;letter-spacing:0;font-weight:500">(opcional)</span></div>
+   <textarea class="field" id="fNote" rows="3" maxlength="500" placeholder="${F.type==='in'?'Ex.: referente ao freela do site, pago pelo cliente X':'Ex.: compras da semana, dividido com a Ana, presente de aniversário…'}">${esc(F.note)}</textarea>
    <div class="flabel">Categoria</div><div class="chips">${cats.map(c=>`<button class="${c.id===F.cat?'on':''}" data-act="f-cat" data-id="${c.id}">${c.e} ${esc(c.n)}</button>`).join('')}</div>
    <div class="two"><div><div class="flabel">${card?'Data da compra':'Data'}</div><input class="field" type="date" id="fDate" value="${F.date}"></div></div>
    ${F.type==='out'?`<div class="flabel">Forma de pagamento</div><div class="chips"><button class="${F.pay==='conta'?'on':''}" data-act="f-pay" data-id="conta">💵 Débito / Pix / Dinheiro</button>${S.cards.map(c=>`<button class="${F.pay===c.id?'on':''}" data-act="f-pay" data-id="${c.id}" style="${F.pay===c.id?'background:'+c.c:''}">💳 ${esc(c.n)}</button>`).join('')}<button data-act="card-new" data-from="form">＋ Cartão</button></div>`:''}
@@ -602,7 +606,7 @@ async function saveTx(){
   syncForm();const amount=F.cents/100;
   if(!(amount>0))return toast('Informe um valor');
   if(!F.date)return toast('Informe a data');
-  const data={type:F.type,amount,desc:F.desc.trim()||catById(F.cat).n,cat:F.cat,date:F.date,pay:F.type==='in'?'conta':F.pay,parc:F.pay!=='conta'?F.parc:1,rec:F.rec};
+  const data={type:F.type,amount,desc:F.desc.trim()||catById(F.cat).n,note:(F.note||'').trim(),cat:F.cat,date:F.date,pay:F.type==='in'?'conta':F.pay,parc:F.pay!=='conta'?F.parc:1,rec:F.rec};
   if(F.att){const aid=uid();await DB.set('att:'+aid,F.att);data.att=aid;if(F.attId)DB.del('att:'+F.attId)}
   else if(F.attDel){if(F.attId)DB.del('att:'+F.attId);data.att=null}
   else if(F.attId)data.att=F.attId;
@@ -690,11 +694,11 @@ async function importBackup(file){
 }
 async function snapshotNow(){try{let snaps=JSON.parse(await DB.get('snaps')||'[]');snaps.unshift({d:todayStr(),n:S.tx.length,s:JSON.stringify(S)});await DB.set('snaps',JSON.stringify(snaps.slice(0,10)))}catch(e){}}
 function exportCSV(){
-  const rows=[['Mês','Data','Descrição','Categoria','Tipo','Forma de pagamento','Parcela','Valor']];
+  const rows=[['Mês','Data','Descrição','Categoria','Tipo','Forma de pagamento','Parcela','Valor','Observações']];
   const all=S.tx.map(t=>t.date.slice(0,7)).sort();if(!all.length)return toast('Nada para exportar');
   let first=all[0],last=ymAdd(ymOf(new Date()),12);
   for(let m=first;m<=last;m=ymAdd(m,1))for(const e of entriesFor(m).reverse()){const c=e.card?cardById(e.card):null;
-    rows.push([m,e.date.split('-').reverse().join('/'),e.desc,catById(e.cat).n,e.v>0?'Receita':'Despesa',c?'Cartão '+c.n:'Conta',e.tag||'',e.v.toFixed(2).replace('.',',')])}
+    rows.push([m,e.date.split('-').reverse().join('/'),e.desc,catById(e.cat).n,e.v>0?'Receita':'Despesa',c?'Cartão '+c.n:'Conta',e.tag||'',e.v.toFixed(2).replace('.',','),e.t.note||''])}
   const csv='﻿'+rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(';')).join('\r\n');
   deliver(new Blob([csv],{type:'text/csv'}),`financas-${todayStr()}.csv`,'Planilha Finanças');
 }
@@ -759,7 +763,7 @@ function pdfMonth(){
   p.text(40,y,'Lançamentos',{size:13,bold:true});y+=10;
   const E=[...s.E].sort((a,b)=>a.date.localeCompare(b.date));
   y=pdfTable(p,y,[{h:'DATA',x:48,w:44},{h:'DESCRIÇÃO',x:92,w:165},{h:'CATEGORIA',x:258,w:110,color:'#5b6275'},{h:'PAGAMENTO',x:370,w:95,color:'#5b6275'},{h:'VALOR',x:465,w:82,align:'right',bold:true}],
-    E.map(e=>{const c=e.card?cardById(e.card):null;return{color:e.v>0?'#0f9d58':'#d93a4a',cells:[dm(e.date),e.desc+(e.tag&&e.tag!=='Todo mês'?' ('+e.tag+')':''),catById(e.cat).n,c?'Cartão '+c.n:(e.v>0?'Conta':'Débito/Pix'),(e.v>0?'+':'-')+money(Math.abs(e.v))]}}));
+    E.map(e=>{const c=e.card?cardById(e.card):null;return{color:e.v>0?'#0f9d58':'#d93a4a',cells:[dm(e.date),e.desc+(e.tag&&e.tag!=='Todo mês'?' ('+e.tag+')':'')+(e.t.note?' - '+e.t.note.replace(/\s+/g,' '):''),catById(e.cat).n,c?'Cartão '+c.n:(e.v>0?'Conta':'Débito/Pix'),(e.v>0?'+':'-')+money(Math.abs(e.v))]}}));
   y+=8;if(y>790){p.add();y=50}p.line(40,y,555,y,'#1c2452',1);y+=18;p.text(40,y,'Saldo do mês',{size:11,bold:true});p.text(555,y,money(s.saldo),{size:11,bold:true,align:'right',color:s.saldo<0?'#d93a4a':'#0f9d58'});
   pdfFooter(p);return p.blob();
 }
@@ -769,7 +773,7 @@ function pdfCard(card){
   let y=120;[['Total da fatura',money(f.total)],['Fechamento',dm(closeDate(card,M))],['Situação',st.t]].forEach((k,i)=>{const x=40+i*175;p.rect(x,y,165,58,'#f4f6fb');p.rect(x,y,4,58,card.c);p.text(x+16,y+22,k[0],{size:9,color:'#5b6275'});p.text(x+16,y+44,k[1],{size:16,bold:true})});
   y+=90;p.text(40,y,'Compras desta fatura',{size:13,bold:true});y+=10;
   y=pdfTable(p,y,[{h:'DATA',x:48,w:50},{h:'DESCRIÇÃO',x:100,w:200},{h:'CATEGORIA',x:300,w:110,color:'#5b6275'},{h:'PARCELA',x:410,w:60,color:'#5b6275'},{h:'VALOR',x:470,w:77,align:'right',bold:true}],
-    [...f.E].sort((a,b)=>a.date.localeCompare(b.date)).map(e=>({cells:[dm(e.date),e.desc,catById(e.cat).n,e.tag||'à vista',money(-e.v)]})));
+    [...f.E].sort((a,b)=>a.date.localeCompare(b.date)).map(e=>({cells:[dm(e.date),e.desc+(e.t.note?' - '+e.t.note.replace(/\s+/g,' '):''),catById(e.cat).n,e.tag||'à vista',money(-e.v)]})));
   y+=8;p.line(40,y,555,y,'#1c2452',1);y+=18;p.text(40,y,'Total',{size:11,bold:true});p.text(555,y,money(f.total),{size:11,bold:true,align:'right'});
   y+=34;if(y>700){p.add();y=50}p.text(40,y,'Próximas faturas (compromissos já assumidos)',{size:11,bold:true});y+=10;
   y=pdfTable(p,y,[{h:'MÊS',x:48,w:200},{h:'VALOR PREVISTO',x:300,w:247,align:'right'}],[1,2,3,4,5,6].map(k=>{const F2=ymAdd(M,k);return{cells:[ymLong(F2),money(cardFatura(card,F2).total)]}}));

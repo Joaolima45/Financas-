@@ -1,5 +1,5 @@
 // Service worker: guarda o app no aparelho para funcionar sem internet
-const CACHE = 'financas-v2';
+const CACHE = 'financas-v3';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png',
   './lib/pdf.min.mjs', './lib/pdf.worker.min.mjs', './lib/por.traineddata.gz',
   './lib/wasm/openjpeg.wasm', './lib/wasm/jbig2.wasm', './lib/wasm/qcms_bg.wasm'];
